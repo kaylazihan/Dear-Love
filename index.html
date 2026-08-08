@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Surat Romantis</title>
+<title>Pesan</title>
 <style>
   * {
     margin: 0;
@@ -18,52 +18,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 15px;
     position: relative;
     overflow-x: hidden;
   }
 
-  .hearts-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    overflow: hidden;
-    z-index: 0;
-  }
-
-  .heart {
-    position: absolute;
-    bottom: -50px;
-    color: rgba(93, 64, 55, 0.5);
-    font-size: 20px;
-    animation: float-up linear infinite;
-    user-select: none;
-  }
-
-  @keyframes float-up {
-    0% {
-      transform: translateY(0) rotate(0deg) scale(1);
-      opacity: 1;
-    }
-    50% {
-      transform: translateY(-50vh) rotate(180deg) scale(1.3);
-      opacity: 0.7;
-    }
-    100% {
-      transform: translateY(-110vh) rotate(360deg) scale(0.8);
-      opacity: 0;
-    }
-  }
-
   .container {
     background: rgba(255, 255, 255, 0.95);
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-    padding: 40px;
-    max-width: 700px;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    padding: 24px;
+    max-width: 520px;
     width: 100%;
     position: relative;
     z-index: 1;
@@ -73,8 +38,8 @@
   h1 {
     text-align: center;
     color: #4e342e;
-    font-size: 2.5em;
-    margin-bottom: 10px;
+    font-size: 1.6em;
+    margin-bottom: 6px;
     text-shadow: 2px 2px 4px rgba(78, 52, 46, 0.2);
   }
 
@@ -82,8 +47,8 @@
     text-align: center;
     color: #5d4037;
     font-style: italic;
-    margin-bottom: 30px;
-    font-size: 1.1em;
+    margin-bottom: 18px;
+    font-size: 0.95em;
   }
 
   .view {
@@ -102,20 +67,20 @@
 
   label {
     display: block;
-    margin: 15px 0 8px 0;
+    margin: 10px 0 5px 0;
     color: #4e342e;
     font-weight: bold;
-    font-size: 1em;
+    font-size: 0.9em;
   }
 
   input[type="text"],
   textarea {
     width: 100%;
-    padding: 12px 15px;
+    padding: 9px 12px;
     border: 2px solid #d7ccc8;
-    border-radius: 10px;
+    border-radius: 8px;
     font-family: 'Georgia', serif;
-    font-size: 1em;
+    font-size: 0.95em;
     transition: border-color 0.3s ease;
     background: #fff;
     color: #333;
@@ -125,13 +90,13 @@
   textarea:focus {
     outline: none;
     border-color: #6d4c41;
-    box-shadow: 0 0 10px rgba(109, 76, 65, 0.2);
+    box-shadow: 0 0 8px rgba(109, 76, 65, 0.15);
   }
 
   textarea {
     resize: vertical;
-    min-height: 200px;
-    line-height: 1.6;
+    min-height: 140px;
+    line-height: 1.5;
   }
 
   .buttons {
@@ -279,11 +244,9 @@
 </head>
 <body>
 
-<div class="hearts-container" id="heartsContainer"></div>
-
 <div class="container">
-  <h1>💌 Surat Romantis</h1>
-  <p class="subtitle">Tulis dan baca pesan penuh cinta</p>
+  <h1>Pesan</h1>
+  <p class="subtitle">Tulis dan baca pesanmu</p>
 
   <div class="view active" id="writeView">
     <form id="letterForm">
@@ -293,12 +256,12 @@
       <label for="sender">Dari:</label>
       <input type="text" id="sender" placeholder="Nama pengirim..." required>
 
-      <label for="message">Pesan/Surat:</label>
-      <textarea id="message" placeholder="Tuliskan surat atau pesan romantismu di sini..." required></textarea>
+      <label for="message">Pesan:</label>
+      <textarea id="message" placeholder="Tuliskan pesanmu di sini..." required></textarea>
 
       <div class="buttons">
-        <button type="submit">💝 Kirim & Simpan</button>
-        <button type="button" class="secondary" id="viewLetterBtn">📖 Baca Surat</button>
+        <button type="submit">Simpan</button>
+        <button type="button" class="secondary" id="viewLetterBtn">Baca Pesan</button>
       </div>
     </form>
   </div>
@@ -306,15 +269,15 @@
   <div class="view" id="readView">
     <div class="letter-display" id="letterDisplay">
       <div class="placeholder">
-        <div class="icon">💌</div>
-        <p>Belum ada surat yang ditulis.</p>
-        <p style="margin-top: 10px;">Tulis surat pertamamu sekarang!</p>
-      </div>
+          <div class="icon">✉️</div>
+          <p>Belum ada pesan yang ditulis.</p>
+          <p style="margin-top: 10px;">Tulis pesan pertamamu sekarang!</p>
+        </div>
     </div>
 
     <div class="buttons">
-      <button id="writeNewBtn">✏️ Tulis Surat Baru</button>
-      <button class="danger" id="deleteLetterBtn">🗑️ Hapus Surat</button>
+      <button id="writeNewBtn">Tulis Pesan Baru</button>
+      <button class="danger" id="deleteLetterBtn">Hapus Pesan</button>
     </div>
   </div>
 </div>
@@ -332,7 +295,6 @@
   const viewLetterBtn = document.getElementById('viewLetterBtn');
   const writeNewBtn = document.getElementById('writeNewBtn');
   const deleteLetterBtn = document.getElementById('deleteLetterBtn');
-  const heartsContainer = document.getElementById('heartsContainer');
 
   function showView(view) {
     writeView.classList.remove('active');
@@ -384,7 +346,7 @@
       recipientInput.value = '';
       senderInput.value = '';
       messageInput.value = '';
-      showToast('Surat telah dihapus');
+      showToast('Pesan telah dihapus');
     }
   }
 
@@ -392,9 +354,9 @@
     if (!letter) {
       letterDisplay.innerHTML = `
         <div class="placeholder">
-          <div class="icon">💌</div>
-          <p>Belum ada surat yang ditulis.</p>
-          <p style="margin-top: 10px;">Tulis surat pertamamu sekarang!</p>
+          <div class="icon">✉️</div>
+          <p>Belum ada pesan yang ditulis.</p>
+          <p style="margin-top: 10px;">Tulis pesan pertamamu sekarang!</p>
         </div>
       `;
       return;
@@ -410,13 +372,13 @@
     });
 
     letterDisplay.innerHTML = `
-      <h2>💌 Surat untuk ${letter.recipient}</h2>
+      <h2>Pesan untuk ${letter.recipient}</h2>
       <div class="divider"></div>
       <p class="meta">📅 ${formattedDate}</p>
       <div class="divider"></div>
       <div class="message">${escapeHtml(letter.message)}</div>
       <div class="divider"></div>
-      <div class="signature">Dengan penuh cinta,<br><strong>${escapeHtml(letter.sender)}</strong></div>
+      <div class="signature">Hormat kami,<br><strong>${escapeHtml(letter.sender)}</strong></div>
     `;
   }
 
@@ -424,21 +386,6 @@
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
-  }
-
-  function createHeart() {
-    const heart = document.createElement('div');
-    heart.className = 'heart';
-    heart.textContent = '❤️';
-    heart.style.left = Math.random() * 100 + '%';
-    heart.style.fontSize = (Math.random() * 20 + 15) + 'px';
-    heart.style.animationDuration = (Math.random() * 5 + 6) + 's';
-    heart.style.animationDelay = Math.random() * 2 + 's';
-    heartsContainer.appendChild(heart);
-
-    setTimeout(() => {
-      heart.remove();
-    }, 8000);
   }
 
   setInterval(createHeart, 800);
@@ -449,7 +396,7 @@
     recipientInput.value = '';
     senderInput.value = '';
     messageInput.value = '';
-    showToast('💝 Surat berhasil disimpan!');
+    showToast('Pesan berhasil disimpan!');
   });
 
   viewLetterBtn.addEventListener('click', () => {
