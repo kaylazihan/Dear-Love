@@ -217,38 +217,39 @@
     margin-bottom: 15px;
   }
 
-  .clickable-placeholder {
-    text-align: center;
-    color: #6d4c41;
-    font-style: italic;
-    padding: 40px 20px;
-    font-size: 1.1em;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    user-select: none;
-  }
-
-  .clickable-placeholder:hover {
-    transform: scale(1.05);
-    color: #4e342e;
-  }
-
-  .clickable-placeholder .icon {
-    font-size: 5em;
-    margin-bottom: 15px;
-    display: block;
-    animation: pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-  }
-
   .divider {
     height: 2px;
     background: linear-gradient(90deg, transparent, #d7ccc8, transparent);
     margin: 25px 0;
+  }
+
+  .code-box {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f5f0eb;
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  .code-box .code-label {
+    font-size: 0.85em;
+    color: #8d6e63;
+    margin-bottom: 8px;
+  }
+
+  .code-box .code-value {
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #4e342e;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+  }
+
+  .code-box input {
+    text-align: center;
+    font-size: 1.2em;
+    letter-spacing: 3px;
+    font-weight: bold;
   }
 
   .history-list {
@@ -335,23 +336,18 @@
       <textarea id="message" placeholder="Write your message here..." required></textarea>
 
       <div class="buttons">
-        <button type="submit">Save & Get Link</button>
-        <button type="button" class="secondary" id="historyBtn">History</button>
+        <button type="submit">Save Message</button>
+        <button type="button" class="secondary" id="openBtn">Open with Code</button>
       </div>
     </form>
   </div>
 
   <div class="view" id="readView">
-    <div class="letter-display" id="letterDisplay">
-      <div class="clickable-placeholder" id="clickablePlaceholder">
-        <div class="icon">✉️</div>
-        <p>Click to read message</p>
-      </div>
-    </div>
+    <div class="letter-display" id="letterDisplay"></div>
 
     <div class="buttons">
       <button id="writeNewBtn">Write New Message</button>
-      <button class="secondary" id="copyLinkBtn" style="display:none;">Copy Link</button>
+      <button class="secondary" id="copyCodeBtn" style="display:none;">Copy Code</button>
     </div>
   </div>
 
@@ -378,40 +374,27 @@
   const senderInput = document.getElementById('sender');
   const messageInput = document.getElementById('message');
   const writeNewBtn = document.getElementById('writeNewBtn');
-  const copyLinkBtn = document.getElementById('copyLinkBtn');
+  const copyCodeBtn = document.getElementById('copyCodeBtn');
   const historyBtn = document.getElementById('historyBtn');
+  const openBtn = document.getElementById('openBtn');
   const historyList = document.getElementById('historyList');
   const backToWriteBtn = document.getElementById('backToWriteBtn');
 
-  let messageRevealed = false;
   let currentMessage = null;
+  let currentCode = null;
+
+  function generateCode() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
 
   function showView(view) {
     writeView.classList.remove('active');
     readView.classList.remove('active');
     historyView.classList.remove('active');
     view.classList.add('active');
-    messageRevealed = false;
-    if (view === readView) {
-      resetReadView();
-    }
     if (view === historyView) {
       renderHistory();
     }
-  }
-
-  function resetReadView() {
-    letterDisplay.innerHTML = `
-      <div class="clickable-placeholder" id="clickablePlaceholder">
-        <div class="icon">✉️</div>
-        <p>Click to read message</p>
-      </div>
-    `;
-    const newPlaceholder = document.getElementById('clickablePlaceholder');
-    if (newPlaceholder) {
-      newPlaceholder.addEventListener('click', revealMessage);
-    }
-    copyLinkBtn.style.display = 'none';
   }
 
   function showToast(message) {
@@ -440,17 +423,17 @@
 
   function getMessageFromHash() {
     const hash = window.location.hash;
-    if (!hash || !hash.startsWith('#message=')) return null;
-    const encoded = hash.replace('#message=', '');
+    if (!hash || !hash.startsWith('#m=')) return null;
+    const encoded = hash.replace('#m=', '');
     return decodeMessage(encoded);
   }
 
   function setMessageInHash(letter) {
     const encoded = encodeMessage(letter);
-    window.location.hash = 'message=' + encoded;
+    window.location.hash = 'm=' + encoded;
   }
 
-  function saveToHistory(letter) {
+  function saveToHistory(letter, code) {
     let history = [];
     try {
       const stored = localStorage.getItem(HISTORY_KEY);
@@ -458,8 +441,8 @@
     } catch (e) {}
     history.unshift({
       ...letter,
+      code,
       id: Date.now(),
-      encoded: encodeMessage(letter),
       createdAt: new Date().toISOString()
     });
     if (history.length > 50) history = history.slice(0, 50);
@@ -496,8 +479,8 @@
           <div class="history-meta">From: ${escapeHtml(item.sender)} • ${formattedDate}</div>
         </div>
         <div class="history-actions">
-          <button class="secondary" data-action="open" data-id="${item.id}">Open</button>
-          <button class="secondary" data-action="share" data-encoded="${item.encoded}">Share</button>
+          <button class="secondary" data-action="open" data-code="${item.code}">Open</button>
+          <button class="secondary" data-action="copy" data-code="${item.code}">Copy Code</button>
         </div>
       `;
       historyList.appendChild(li);
@@ -506,42 +489,24 @@
     historyList.querySelectorAll('button').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const action = e.target.dataset.action;
-        const id = parseInt(e.target.dataset.id);
-        const encoded = e.target.dataset.encoded;
+        const code = e.target.dataset.code;
         const history = getHistory();
-        const item = history.find(h => h.id === id);
+        const item = history.find(h => h.code === code);
 
         if (action === 'open' && item) {
           currentMessage = item;
+          currentCode = code;
           setMessageInHash(item);
           renderLetter(item);
           showView(readView);
-        } else if (action === 'share' && encoded) {
-          const url = window.location.origin + window.location.pathname + '#message=' + encoded;
-          navigator.clipboard.writeText(url).then(() => {
-            showToast('Link copied! Share it with anyone.');
-          }).catch(() => {
-            showToast('Copy this URL: ' + url);
-          });
+        } else if (action === 'copy' && code) {
+          copyToClipboard(code, 'Code copied! Share this code with anyone to read the message.');
         }
       });
     });
   }
 
-  function revealMessage() {
-    if (messageRevealed) return;
-    messageRevealed = true;
-    const letter = currentMessage || getMessageFromHash();
-    if (!letter) {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        currentMessage = JSON.parse(stored);
-      }
-    }
-    renderLetter(currentMessage || letter);
-  }
-
-  function renderLetter(letter) {
+  function renderLetter(letter, code) {
     if (!letter) {
       letterDisplay.innerHTML = `
         <div class="placeholder">
@@ -549,6 +514,7 @@
           <p>No message written yet.</p>
         </div>
       `;
+      copyCodeBtn.style.display = 'none';
       return;
     }
 
@@ -561,6 +527,7 @@
       minute: '2-digit'
     });
 
+    const displayCode = code || currentCode;
     letterDisplay.innerHTML = `
       <h2>Message for ${escapeHtml(letter.recipient)}</h2>
       <div class="divider"></div>
@@ -569,8 +536,51 @@
       <div class="message">${escapeHtml(letter.message)}</div>
       <div class="divider"></div>
       <div class="signature">Yours sincerely,<br><strong>${escapeHtml(letter.sender)}</strong></div>
+      ${displayCode ? `
+      <div class="divider"></div>
+      <div class="code-box">
+        <div class="code-label">Share this code:</div>
+        <div class="code-value">${displayCode}</div>
+        <button class="secondary" id="copyCodeFromViewBtn" style="min-width: auto; padding: 8px 20px; font-size: 0.95em;">Copy Code</button>
+      </div>
+      ` : ''}
     `;
-    copyLinkBtn.style.display = 'flex';
+    copyCodeBtn.style.display = 'flex';
+
+    const copyBtn = document.getElementById('copyCodeFromViewBtn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        copyToClipboard(displayCode, 'Code copied! Share this code with anyone.');
+      });
+    }
+  }
+
+  function copyToClipboard(text, successMessage) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(successMessage);
+      }).catch(() => {
+        fallbackCopy(text, successMessage);
+      });
+    } else {
+      fallbackCopy(text, successMessage);
+    }
+  }
+
+  function fallbackCopy(text, successMessage) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      showToast(successMessage);
+    } catch (err) {
+      showToast('Copy failed. Please copy manually: ' + text);
+    }
+    document.body.removeChild(ta);
   }
 
   function escapeHtml(text) {
@@ -581,6 +591,7 @@
 
   letterForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    const code = generateCode();
     const letter = {
       recipient: recipientInput.value.trim(),
       sender: senderInput.value.trim(),
@@ -589,14 +600,32 @@
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(letter));
     currentMessage = letter;
-    saveToHistory(letter);
+    currentCode = code;
+    saveToHistory(letter, code);
     setMessageInHash(letter);
-    showToast('Message saved! Share the link below.');
+    showToast('Message saved! Share the code below.');
     showView(readView);
+  });
+
+  openBtn.addEventListener('click', () => {
+    const code = prompt('Enter message code:');
+    if (!code) return;
+    const history = getHistory();
+    const item = history.find(h => h.code && h.code.toLowerCase() === code.trim().toLowerCase());
+    if (item) {
+      currentMessage = item;
+      currentCode = item.code;
+      setMessageInHash(item);
+      renderLetter(item);
+      showView(readView);
+    } else {
+      showToast('Code not found. Please check and try again.');
+    }
   });
 
   writeNewBtn.addEventListener('click', () => {
     currentMessage = null;
+    currentCode = null;
     window.location.hash = '';
     recipientInput.value = '';
     senderInput.value = '';
@@ -604,13 +633,10 @@
     showView(writeView);
   });
 
-  copyLinkBtn.addEventListener('click', () => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url).then(() => {
-      showToast('Link copied! Share it with anyone.');
-    }).catch(() => {
-      showToast('Copy this URL: ' + url);
-    });
+  copyCodeBtn.addEventListener('click', () => {
+    if (currentCode) {
+      copyToClipboard(currentCode, 'Code copied! Share this code with anyone.');
+    }
   });
 
   historyBtn.addEventListener('click', () => {
