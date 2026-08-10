@@ -217,6 +217,34 @@
     margin-bottom: 15px;
   }
 
+  .clickable-placeholder {
+    text-align: center;
+    color: #6d4c41;
+    font-style: italic;
+    padding: 40px 20px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+  }
+
+  .clickable-placeholder:hover {
+    transform: scale(1.05);
+    color: #4e342e;
+  }
+
+  .clickable-placeholder .icon {
+    font-size: 5em;
+    margin-bottom: 15px;
+    display: block;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
   .divider {
     height: 2px;
     background: linear-gradient(90deg, transparent, #d7ccc8, transparent);
@@ -268,11 +296,10 @@
 
   <div class="view" id="readView">
     <div class="letter-display" id="letterDisplay">
-      <div class="placeholder">
-          <div class="icon">✉️</div>
-          <p>Belum ada pesan yang ditulis.</p>
-          <p style="margin-top: 10px;">Tulis pesan pertamamu sekarang!</p>
-        </div>
+      <div class="clickable-placeholder" id="clickablePlaceholder">
+        <div class="icon">✉️</div>
+        <p>Click to read message</p>
+      </div>
     </div>
 
     <div class="buttons">
@@ -295,11 +322,31 @@
   const viewLetterBtn = document.getElementById('viewLetterBtn');
   const writeNewBtn = document.getElementById('writeNewBtn');
   const deleteLetterBtn = document.getElementById('deleteLetterBtn');
+  const clickablePlaceholder = document.getElementById('clickablePlaceholder');
+
+  let messageRevealed = false;
 
   function showView(view) {
     writeView.classList.remove('active');
     readView.classList.remove('active');
     view.classList.add('active');
+    messageRevealed = false;
+    if (view === readView) {
+      resetReadView();
+    }
+  }
+
+  function resetReadView() {
+    letterDisplay.innerHTML = `
+      <div class="clickable-placeholder" id="clickablePlaceholder">
+        <div class="icon">✉️</div>
+        <p>Click to read message</p>
+      </div>
+    `;
+    const newPlaceholder = document.getElementById('clickablePlaceholder');
+    if (newPlaceholder) {
+      newPlaceholder.addEventListener('click', revealMessage);
+    }
   }
 
   function showToast(message) {
@@ -310,6 +357,13 @@
     setTimeout(() => {
       toast.remove();
     }, 3000);
+  }
+
+  function revealMessage() {
+    if (messageRevealed) return;
+    messageRevealed = true;
+    const letter = loadLetter();
+    renderLetter(letter);
   }
 
   function saveLetter() {
@@ -336,13 +390,7 @@
   function deleteLetter() {
     if (confirm('Are you sure you want to delete this message?')) {
       localStorage.removeItem(STORAGE_KEY);
-      letterDisplay.innerHTML = `
-        <div class="placeholder">
-          <div class="icon">✉️</div>
-          <p>No message written yet.</p>
-          <p style="margin-top: 10px;">Write your first message now!</p>
-        </div>
-      `;
+      resetReadView();
       recipientInput.value = '';
       senderInput.value = '';
       messageInput.value = '';
@@ -388,20 +436,16 @@
     return div.innerHTML;
   }
 
-  setInterval(createHeart, 800);
-
   letterForm.addEventListener('submit', (e) => {
     e.preventDefault();
     saveLetter();
     recipientInput.value = '';
     senderInput.value = '';
     messageInput.value = '';
-    showToast('Pesan berhasil disimpan!');
+    showToast('Message saved successfully!');
   });
 
   viewLetterBtn.addEventListener('click', () => {
-    const letter = loadLetter();
-    renderLetter(letter);
     showView(readView);
   });
 
