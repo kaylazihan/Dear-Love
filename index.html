@@ -223,80 +223,86 @@
     margin: 25px 0;
   }
 
-  .code-box {
-    margin-top: 15px;
-    padding: 15px;
-    background: #f5f0eb;
-    border-radius: 10px;
-    text-align: center;
-  }
-
-  .code-box .code-label {
-    font-size: 0.85em;
-    color: #8d6e63;
-    margin-bottom: 8px;
-  }
-
-  .code-box .code-value {
-    font-size: 1.4em;
-    font-weight: bold;
-    color: #4e342e;
-    letter-spacing: 3px;
-    margin-bottom: 10px;
-  }
-
-  .code-box input {
-    text-align: center;
-    font-size: 1.2em;
-    letter-spacing: 3px;
-    font-weight: bold;
-  }
-
-  .history-list {
+  .message-list {
     list-style: none;
     margin-top: 10px;
   }
 
-  .history-list li {
-    padding: 12px;
-    margin-bottom: 8px;
+  .message-list li {
+    padding: 15px;
+    margin-bottom: 10px;
     background: #f5f0eb;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
     transition: all 0.2s ease;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
   }
 
-  .history-list li:hover {
+  .message-list li:hover {
     background: #e8dfd5;
     transform: translateX(4px);
   }
 
-  .history-list .history-info {
-    flex: 1;
-  }
-
-  .history-list .history-to {
+  .message-list .msg-to {
     font-weight: bold;
     color: #4e342e;
+    margin-bottom: 4px;
   }
 
-  .history-list .history-meta {
-    font-size: 0.85em;
+  .message-list .msg-preview {
+    color: #6d4c41;
+    font-size: 0.9em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .message-list .msg-meta {
+    font-size: 0.8em;
     color: #8d6e63;
+    margin-top: 4px;
   }
 
-  .history-list .history-actions {
-    display: flex;
-    gap: 8px;
+  .settings-box {
+    background: #f5f0eb;
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 15px;
   }
 
-  .history-list button {
-    padding: 6px 12px;
-    font-size: 0.85em;
-    min-width: auto;
+  .settings-box h3 {
+    color: #4e342e;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+  }
+
+  .settings-box p {
+    color: #6d4c41;
+    font-size: 0.9em;
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+
+  .settings-box input {
+    margin-bottom: 10px;
+  }
+
+  .sync-status {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+
+  .sync-status.on {
+    background: #c8e6c9;
+    color: #2e7d32;
+  }
+
+  .sync-status.off {
+    background: #ffcdd2;
+    color: #c62828;
   }
 
   @media (max-width: 600px) {
@@ -321,7 +327,7 @@
 <body>
 
 <div class="container">
-  <h1>Dear, Love</h1>
+  <h1>Dear, Love <span id="syncStatus" class="sync-status off">Local</span></h1>
   <p class="subtitle">Write and read your messages</p>
 
   <div class="view active" id="writeView">
@@ -338,6 +344,8 @@
       <div class="buttons">
         <button type="submit">Save Message</button>
         <button type="button" class="secondary" id="openBtn">Open with Code</button>
+        <button type="button" class="secondary" id="historyBtn">History</button>
+        <button type="button" class="secondary" id="settingsBtn">Settings</button>
       </div>
     </form>
   </div>
@@ -352,11 +360,29 @@
   </div>
 
   <div class="view" id="historyView">
-    <h2 style="text-align: center; color: #4e342e; margin-bottom: 15px;">Message History</h2>
+    <h2 style="text-align: center; color: #4e342e; margin-bottom: 15px;">Public Inbox</h2>
     <div class="divider"></div>
-    <ul class="history-list" id="historyList"></ul>
+    <ul class="message-list" id="messageList"></ul>
     <div class="buttons">
       <button id="backToWriteBtn">Back to Write</button>
+      <button class="secondary" id="refreshBtn">Refresh</button>
+    </div>
+  </div>
+
+  <div class="view" id="settingsView">
+    <h2 style="text-align: center; color: #4e342e; margin-bottom: 15px;">Settings</h2>
+    <div class="divider"></div>
+    <div class="settings-box">
+      <h3>GitHub Sync</h3>
+      <p>Connect your GitHub account to share messages publicly. Anyone can read messages from the public inbox without signing in.</p>
+      <label for="githubToken">GitHub Personal Access Token:</label>
+      <input type="text" id="githubToken" placeholder="ghp_xxxxxxxxxxxx">
+      <p style="font-size: 0.8em; color: #8d6e63;">Required scopes: <code>public_repo</code>. <a href="https://github.com/settings/tokens/new" target="_blank">Create token</a></p>
+      <button id="saveTokenBtn">Save Token</button>
+      <button class="danger" id="clearTokenBtn">Clear Token</button>
+    </div>
+    <div class="buttons">
+      <button id="backFromSettingsBtn">Back</button>
     </div>
   </div>
 </div>
@@ -364,10 +390,14 @@
 <script>
   const STORAGE_KEY = 'dear_love_message';
   const HISTORY_KEY = 'dear_love_history';
+  const TOKEN_KEY = 'dear_love_github_token';
+  const REPO_OWNER = 'kaylazihan';
+  const REPO_NAME = 'Dear-Love';
 
   const writeView = document.getElementById('writeView');
   const readView = document.getElementById('readView');
   const historyView = document.getElementById('historyView');
+  const settingsView = document.getElementById('settingsView');
   const letterForm = document.getElementById('letterForm');
   const letterDisplay = document.getElementById('letterDisplay');
   const recipientInput = document.getElementById('recipient');
@@ -377,8 +407,15 @@
   const copyCodeBtn = document.getElementById('copyCodeBtn');
   const historyBtn = document.getElementById('historyBtn');
   const openBtn = document.getElementById('openBtn');
-  const historyList = document.getElementById('historyList');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const messageList = document.getElementById('messageList');
   const backToWriteBtn = document.getElementById('backToWriteBtn');
+  const backFromSettingsBtn = document.getElementById('backFromSettingsBtn');
+  const saveTokenBtn = document.getElementById('saveTokenBtn');
+  const clearTokenBtn = document.getElementById('clearTokenBtn');
+  const githubTokenInput = document.getElementById('githubToken');
+  const syncStatus = document.getElementById('syncStatus');
+  const refreshBtn = document.getElementById('refreshBtn');
 
   let currentMessage = null;
   let currentCode = null;
@@ -391,9 +428,24 @@
     writeView.classList.remove('active');
     readView.classList.remove('active');
     historyView.classList.remove('active');
+    settingsView.classList.remove('active');
     view.classList.add('active');
     if (view === historyView) {
-      renderHistory();
+      loadPublicInbox();
+    }
+    if (view === settingsView) {
+      githubTokenInput.value = localStorage.getItem(TOKEN_KEY) || '';
+    }
+  }
+
+  function updateSyncStatus() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) {
+      syncStatus.textContent = 'Synced';
+      syncStatus.className = 'sync-status on';
+    } else {
+      syncStatus.textContent = 'Local';
+      syncStatus.className = 'sync-status off';
     }
   }
 
@@ -458,60 +510,104 @@
     }
   }
 
-  function renderHistory() {
-    const history = getHistory();
-    historyList.innerHTML = '';
-    if (history.length === 0) {
-      historyList.innerHTML = '<li style="cursor:default; justify-content:center; color:#8d6e63;">No messages yet</li>';
-      return;
+  async function createGitHubIssue(letter) {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return false;
+
+    const title = `Message to ${letter.recipient} from ${letter.sender}`;
+    const body = `**To:** ${letter.recipient}\n**From:** ${letter.sender}\n**Date:** ${new Date(letter.createdAt).toLocaleString()}\n\n${letter.message}`;
+
+    try {
+      const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ title, body, labels: ['message'] })
+      });
+
+      if (response.ok) {
+        showToast('Message published to public inbox!');
+        return true;
+      } else {
+        const error = await response.json();
+        showToast('Failed to publish: ' + (error.message || 'Unknown error'));
+        return false;
+      }
+    } catch (error) {
+      showToast('Network error. Message saved locally only.');
+      return false;
     }
-    history.forEach((item) => {
-      const li = document.createElement('li');
-      const date = new Date(item.createdAt);
-      const formattedDate = date.toLocaleDateString('en-US', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
-      });
-      li.innerHTML = `
-        <div class="history-info">
-          <div class="history-to">To: ${escapeHtml(item.recipient)}</div>
-          <div class="history-meta">From: ${escapeHtml(item.sender)} • ${formattedDate}</div>
-        </div>
-        <div class="history-actions">
-          <button class="secondary" data-action="open" data-code="${item.code}">Open</button>
-          <button class="secondary" data-action="copy" data-code="${item.code}">Copy Code</button>
-        </div>
-      `;
-      historyList.appendChild(li);
-    });
-
-    historyList.querySelectorAll('button').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const action = e.target.dataset.action;
-        const code = e.target.dataset.code;
-        const history = getHistory();
-        const item = history.find(h => h.code === code);
-
-        if (action === 'open' && item) {
-          currentMessage = item;
-          currentCode = code;
-          setMessageInHash(item);
-          renderLetter(item);
-          showView(readView);
-        } else if (action === 'copy' && code) {
-          copyToClipboard(code, 'Code copied! Share this code with anyone to read the message.');
-        }
-      });
-    });
   }
 
-  function renderLetter(letter, code) {
+  async function loadPublicInbox() {
+    messageList.innerHTML = '<li style="cursor:default; justify-content:center; color:#8d6e63;">Loading messages...</li>';
+
+    try {
+      const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues?state=open&sort=created&direction=desc&per_page=30&labels=message`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch messages');
+      }
+
+      const issues = await response.json();
+      messageList.innerHTML = '';
+
+      if (issues.length === 0) {
+        messageList.innerHTML = '<li style="cursor:default; justify-content:center; color:#8d6e63;">No messages yet. Be the first to write one!</li>';
+        return;
+      }
+
+      issues.forEach((issue) => {
+        const li = document.createElement('li');
+        const lines = issue.body.split('\n');
+        let recipient = '', sender = '', message = '';
+        lines.forEach(line => {
+          if (line.startsWith('**To:**')) recipient = line.replace('**To:**', '').trim();
+          if (line.startsWith('**From:**')) sender = line.replace('**From:**', '').trim();
+        });
+        const messageLines = lines.slice(lines.indexOf('') + 1);
+        message = messageLines.join('\n').trim();
+
+        const date = new Date(issue.created_at);
+        const formattedDate = date.toLocaleDateString('en-US', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        });
+
+        li.innerHTML = `
+          <div class="msg-to">To: ${escapeHtml(recipient)} <span style="font-weight:normal; color:#8d6e63;">from ${escapeHtml(sender)}</span></div>
+          <div class="msg-preview">${escapeHtml(message.substring(0, 100))}${message.length > 100 ? '...' : ''}</div>
+          <div class="msg-meta">${formattedDate} • #${issue.number}</div>
+        `;
+        li.addEventListener('click', () => {
+          const fullMessage = {
+            recipient,
+            sender,
+            message,
+            createdAt: issue.created_at
+          };
+          currentMessage = fullMessage;
+          currentCode = null;
+          renderLetter(fullMessage);
+          showView(readView);
+        });
+        messageList.appendChild(li);
+      });
+    } catch (error) {
+      messageList.innerHTML = `<li style="cursor:default; justify-content:center; color:#8d6e63;">Failed to load messages. ${error.message}</li>`;
+    }
+  }
+
+  function renderLetter(letter) {
     if (!letter) {
       letterDisplay.innerHTML = `
         <div class="placeholder">
           <div class="icon">✉️</div>
-          <p>No message written yet.</p>
+          <p>No message selected.</p>
         </div>
       `;
       copyCodeBtn.style.display = 'none';
@@ -527,7 +623,6 @@
       minute: '2-digit'
     });
 
-    const displayCode = code || currentCode;
     letterDisplay.innerHTML = `
       <h2>Message for ${escapeHtml(letter.recipient)}</h2>
       <div class="divider"></div>
@@ -536,51 +631,8 @@
       <div class="message">${escapeHtml(letter.message)}</div>
       <div class="divider"></div>
       <div class="signature">Yours sincerely,<br><strong>${escapeHtml(letter.sender)}</strong></div>
-      ${displayCode ? `
-      <div class="divider"></div>
-      <div class="code-box">
-        <div class="code-label">Share this code:</div>
-        <div class="code-value">${displayCode}</div>
-        <button class="secondary" id="copyCodeFromViewBtn" style="min-width: auto; padding: 8px 20px; font-size: 0.95em;">Copy Code</button>
-      </div>
-      ` : ''}
     `;
-    copyCodeBtn.style.display = 'flex';
-
-    const copyBtn = document.getElementById('copyCodeFromViewBtn');
-    if (copyBtn) {
-      copyBtn.addEventListener('click', () => {
-        copyToClipboard(displayCode, 'Code copied! Share this code with anyone.');
-      });
-    }
-  }
-
-  function copyToClipboard(text, successMessage) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(() => {
-        showToast(successMessage);
-      }).catch(() => {
-        fallbackCopy(text, successMessage);
-      });
-    } else {
-      fallbackCopy(text, successMessage);
-    }
-  }
-
-  function fallbackCopy(text, successMessage) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-      document.execCommand('copy');
-      showToast(successMessage);
-    } catch (err) {
-      showToast('Copy failed. Please copy manually: ' + text);
-    }
-    document.body.removeChild(ta);
+    copyCodeBtn.style.display = 'none';
   }
 
   function escapeHtml(text) {
@@ -589,9 +641,8 @@
     return div.innerHTML;
   }
 
-  letterForm.addEventListener('submit', (e) => {
+  letterForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const code = generateCode();
     const letter = {
       recipient: recipientInput.value.trim(),
       sender: senderInput.value.trim(),
@@ -600,10 +651,17 @@
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(letter));
     currentMessage = letter;
-    currentCode = code;
-    saveToHistory(letter, code);
+    saveToHistory(letter, null);
     setMessageInHash(letter);
-    showToast('Message saved! Share the code below.');
+    renderLetter(letter);
+    
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) {
+      await createGitHubIssue(letter);
+    } else {
+      showToast('Message saved locally. Add a GitHub token in Settings to share publicly.');
+    }
+    
     showView(readView);
   });
 
@@ -633,18 +691,44 @@
     showView(writeView);
   });
 
-  copyCodeBtn.addEventListener('click', () => {
-    if (currentCode) {
-      copyToClipboard(currentCode, 'Code copied! Share this code with anyone.');
-    }
-  });
-
   historyBtn.addEventListener('click', () => {
     showView(historyView);
   });
 
+  settingsBtn.addEventListener('click', () => {
+    showView(settingsView);
+  });
+
   backToWriteBtn.addEventListener('click', () => {
     showView(writeView);
+  });
+
+  backFromSettingsBtn.addEventListener('click', () => {
+    updateSyncStatus();
+    showView(writeView);
+  });
+
+  saveTokenBtn.addEventListener('click', () => {
+    const token = githubTokenInput.value.trim();
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+      showToast('GitHub token saved! Messages will sync to public inbox.');
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+      showToast('GitHub token removed.');
+    }
+    updateSyncStatus();
+  });
+
+  clearTokenBtn.addEventListener('click', () => {
+    localStorage.removeItem(TOKEN_KEY);
+    githubTokenInput.value = '';
+    showToast('GitHub token cleared.');
+    updateSyncStatus();
+  });
+
+  refreshBtn.addEventListener('click', () => {
+    loadPublicInbox();
   });
 
   window.addEventListener('hashchange', () => {
@@ -657,6 +741,7 @@
   });
 
   window.addEventListener('load', () => {
+    updateSyncStatus();
     const letter = getMessageFromHash();
     if (letter) {
       currentMessage = letter;
