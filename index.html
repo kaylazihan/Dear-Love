@@ -251,15 +251,51 @@
     margin: 25px 0;
   }
 
-  .share-link {
-    margin-top: 15px;
-    padding: 10px;
+  .history-list {
+    list-style: none;
+    margin-top: 10px;
+  }
+
+  .history-list li {
+    padding: 12px;
+    margin-bottom: 8px;
     background: #f5f0eb;
     border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .history-list li:hover {
+    background: #e8dfd5;
+    transform: translateX(4px);
+  }
+
+  .history-list .history-info {
+    flex: 1;
+  }
+
+  .history-list .history-to {
+    font-weight: bold;
+    color: #4e342e;
+  }
+
+  .history-list .history-meta {
     font-size: 0.85em;
-    word-break: break-all;
-    color: #5d4037;
-    display: none;
+    color: #8d6e63;
+  }
+
+  .history-list .history-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .history-list button {
+    padding: 6px 12px;
+    font-size: 0.85em;
+    min-width: auto;
   }
 
   @media (max-width: 600px) {
@@ -300,6 +336,7 @@
 
       <div class="buttons">
         <button type="submit">Save & Get Link</button>
+        <button type="button" class="secondary" id="historyBtn">History</button>
       </div>
     </form>
   </div>
@@ -317,13 +354,24 @@
       <button class="secondary" id="copyLinkBtn" style="display:none;">Copy Link</button>
     </div>
   </div>
+
+  <div class="view" id="historyView">
+    <h2 style="text-align: center; color: #4e342e; margin-bottom: 15px;">Message History</h2>
+    <div class="divider"></div>
+    <ul class="history-list" id="historyList"></ul>
+    <div class="buttons">
+      <button id="backToWriteBtn">Back to Write</button>
+    </div>
+  </div>
 </div>
 
 <script>
   const STORAGE_KEY = 'dear_love_message';
+  const HISTORY_KEY = 'dear_love_history';
 
   const writeView = document.getElementById('writeView');
   const readView = document.getElementById('readView');
+  const historyView = document.getElementById('historyView');
   const letterForm = document.getElementById('letterForm');
   const letterDisplay = document.getElementById('letterDisplay');
   const recipientInput = document.getElementById('recipient');
@@ -331,6 +379,9 @@
   const messageInput = document.getElementById('message');
   const writeNewBtn = document.getElementById('writeNewBtn');
   const copyLinkBtn = document.getElementById('copyLinkBtn');
+  const historyBtn = document.getElementById('historyBtn');
+  const historyList = document.getElementById('historyList');
+  const backToWriteBtn = document.getElementById('backToWriteBtn');
 
   let messageRevealed = false;
   let currentMessage = null;
@@ -338,10 +389,14 @@
   function showView(view) {
     writeView.classList.remove('active');
     readView.classList.remove('active');
+    historyView.classList.remove('active');
     view.classList.add('active');
     messageRevealed = false;
     if (view === readView) {
       resetReadView();
+    }
+    if (view === historyView) {
+      renderHistory();
     }
   }
 
@@ -393,6 +448,84 @@
   function setMessageInHash(letter) {
     const encoded = encodeMessage(letter);
     window.location.hash = 'message=' + encoded;
+  }
+
+  function saveToHistory(letter) {
+    let history = [];
+    try {
+      const stored = localStorage.getItem(HISTORY_KEY);
+      if (stored) history = JSON.parse(stored);
+    } catch (e) {}
+    history.unshift({
+      ...letter,
+      id: Date.now(),
+      encoded: encodeMessage(letter),
+      createdAt: new Date().toISOString()
+    });
+    if (history.length > 50) history = history.slice(0, 50);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  }
+
+  function getHistory() {
+    try {
+      const stored = localStorage.getItem(HISTORY_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function renderHistory() {
+    const history = getHistory();
+    historyList.innerHTML = '';
+    if (history.length === 0) {
+      historyList.innerHTML = '<li style="cursor:default; justify-content:center; color:#8d6e63;">No messages yet</li>';
+      return;
+    }
+    history.forEach((item) => {
+      const li = document.createElement('li');
+      const date = new Date(item.createdAt);
+      const formattedDate = date.toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+      li.innerHTML = `
+        <div class="history-info">
+          <div class="history-to">To: ${escapeHtml(item.recipient)}</div>
+          <div class="history-meta">From: ${escapeHtml(item.sender)} • ${formattedDate}</div>
+        </div>
+        <div class="history-actions">
+          <button class="secondary" data-action="open" data-id="${item.id}">Open</button>
+          <button class="secondary" data-action="share" data-encoded="${item.encoded}">Share</button>
+        </div>
+      `;
+      historyList.appendChild(li);
+    });
+
+    historyList.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const action = e.target.dataset.action;
+        const id = parseInt(e.target.dataset.id);
+        const encoded = e.target.dataset.encoded;
+        const history = getHistory();
+        const item = history.find(h => h.id === id);
+
+        if (action === 'open' && item) {
+          currentMessage = item;
+          setMessageInHash(item);
+          renderLetter(item);
+          showView(readView);
+        } else if (action === 'share' && encoded) {
+          const url = window.location.origin + window.location.pathname + '#message=' + encoded;
+          navigator.clipboard.writeText(url).then(() => {
+            showToast('Link copied! Share it with anyone.');
+          }).catch(() => {
+            showToast('Copy this URL: ' + url);
+          });
+        }
+      });
+    });
   }
 
   function revealMessage() {
@@ -456,6 +589,7 @@
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(letter));
     currentMessage = letter;
+    saveToHistory(letter);
     setMessageInHash(letter);
     showToast('Message saved! Share the link below.');
     showView(readView);
@@ -477,6 +611,14 @@
     }).catch(() => {
       showToast('Copy this URL: ' + url);
     });
+  });
+
+  historyBtn.addEventListener('click', () => {
+    showView(historyView);
+  });
+
+  backToWriteBtn.addEventListener('click', () => {
+    showView(writeView);
   });
 
   window.addEventListener('hashchange', () => {
